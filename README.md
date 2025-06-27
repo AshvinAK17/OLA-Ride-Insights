@@ -25,7 +25,7 @@ An end-to-end data analysis and visualization project using OLA ride datasets. T
 - Cleaned nulls in `customer_ratings`, `driver_ratings`,`V_TAT`,`C_TAT` and converted null values in `Canceled_Rides_by_Customer`, `Canceled_Rides_by_Driver`,`Incomplete_Rides_Reason`
 - Standardized categorical values (e.g., `Booking_Status`, `Payment_Method`).
 - Converted `Date` and `Time` into appropriate formats for analysis.
-- 
+
 ---
 
 ## Technologies Used
