@@ -1,4 +1,4 @@
-import streamlit as st
-import pandas as pd
-import mysql.connector
-import matplotlib.pyplot as plt
+streamlit
+pandas
+mysql-connector-python
+matplotlib
