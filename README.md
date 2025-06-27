@@ -30,11 +30,11 @@ An end-to-end data analysis and visualization project using OLA ride datasets. T
 
 ## Technologies Used
 
-- **Python** (Pandas, Matplotlib, MySQL Connector)
-- **SQL** (MySQL for querying)
-- **Power BI** (Interactive dashboards)
-- **Streamlit** (Web-based dashboard interface)
-- **Git** for version control
+- **Python**  (Pandas, Matplotlib, MySQL Connector)
+- **SQL**  (MySQL for querying)
+- **Power BI**  (Interactive dashboards)
+- **Streamlit**  (Web-based dashboard interface)
+- **Git**  for version control
 
 ---
 
