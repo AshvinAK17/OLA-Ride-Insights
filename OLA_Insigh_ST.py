@@ -3,44 +3,48 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from st_files_connection import FilesConnection
 
-# Page Config
+# --- Page Config ---
 st.set_page_config(page_title="OLA Ride Insights", layout="wide")
 
-# Initial Landing Page
+# --- Session State ---
 if "view_analysis" not in st.session_state:
     st.session_state.view_analysis = False
 
-# Main Title
-st.title("OLA Ride Insights")
+# --- Title ---
+st.markdown("""
+    <h1 style='text-align: center; font-size: 35px;'>OLA Ride Insights</h1>
+""", unsafe_allow_html=True)
 
+# --- Landing Page ---
 if not st.session_state.view_analysis:
-    st.header("Welcome to the OLA Ride Insights Dashboard")
-    st.write("Click below to explore the analysis of bookings, revenue, and performance metrics.")
+    st.markdown("""
+        <h2 style='font-size: 28px; text-align:center;'>Welcome to the OLA Ride Insights Dashboard</h2>
+        <p style='font-size: 20px; text-align:center;'>Click below to explore the analysis.</p>
+    """, unsafe_allow_html=True)
     if st.button("Click to View Analysis", use_container_width=True):
         st.session_state.view_analysis = True
     st.stop()
 
-# Back Button
+# --- Back Button ---
 if st.button("Back to Dashboard"):
     st.session_state.view_analysis = False
     st.rerun()
 
-# Connect to S3 with proper configuration
-try:
-    conn = st.connection(
-        "s3",
-        type=FilesConnection,
-        config={
-            "client_kwargs": {
-                "aws_access_key_id": st.secrets["connections.s3"]["aws_access_key_id"],
-                "aws_secret_access_key": st.secrets["connections.s3"]["aws_secret_access_key"],
-                "region_name": st.secrets["connections.s3"]["region"]
-            }
-        }
-    )
-    
-    df = conn.read("ashvinstreamlit/ola_name.csv", input_format="csv", ttl=600)
-    
+# --- S3 Connection ---
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def load_data():
+    try:
+        conn = st.connection("s3", type=FilesConnection)
+        return conn.read("ashvinstreamlit/ola_name.csv", input_format="csv")
+    except Exception as e:
+        st.error(f"Failed to load data: {str(e)}")
+        return pd.DataFrame()  # Return empty DataFrame on error
+
+df = load_data()
+
+if df.empty:
+    st.stop()  # Halt execution if data loading failed
+
     # Data preprocessing
     df['Date'] = pd.to_datetime(df['Date'])
     df['Customer_ID'] = df['Customer_ID'].str.strip()
