@@ -29,17 +29,10 @@ if st.button("Back to Dashboard"):
     st.rerun()
 
 # --- S3 Data Load ---
-@st.cache_data(ttl=600)
-def load_data():
-    try:
         conn = st.connection("s3", type=FilesConnection)
         df = conn.read("ashvinstreamlit/ola_name.csv", input_format="csv")
         df['Date'] = pd.to_datetime(df['Date'])
         df['Customer_ID'] = df['Customer_ID'].str.strip()
-        return df
-    except Exception as e:
-        st.error(f"❌ Failed to load data from S3: {str(e)}")
-        return pd.DataFrame()
 
 df = load_data()
 
