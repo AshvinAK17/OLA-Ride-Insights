@@ -10,28 +10,35 @@ st.set_page_config(page_title="OLA Ride Insights", layout="wide")
 if "view_analysis" not in st.session_state:
     st.session_state.view_analysis = False
 
-# Main Centered Title
-st.markdown("""
-    <h1 style='text-align: center; font-size: 35px;'>OLA Ride Insights</h1>
-""", unsafe_allow_html=True)
+# Main Title
+st.title("OLA Ride Insights")
 
 if not st.session_state.view_analysis:
-    st.markdown("""
-        <h2 style='font-size: 28px; text-align:center;'>Welcome to the OLA Ride Insights Dashboard</h2>
-        <p style='font-size: 20px; text-align:center;'>Click below to explore the analysis of bookings, revenue, and performance metrics.</p>
-    """, unsafe_allow_html=True)
+    st.header("Welcome to the OLA Ride Insights Dashboard")
+    st.write("Click below to explore the analysis of bookings, revenue, and performance metrics.")
     if st.button("Click to View Analysis", use_container_width=True):
         st.session_state.view_analysis = True
     st.stop()
 
-# Back to Dashboard Button
+# Back Button
 if st.button("Back to Dashboard"):
     st.session_state.view_analysis = False
     st.rerun()
 
-# Connect to S3 CSV (using Streamlit secrets)
+# Connect to S3 with proper configuration
 try:
-    conn = st.connection("s3", type=FilesConnection)
+    conn = st.connection(
+        "s3",
+        type=FilesConnection,
+        config={
+            "client_kwargs": {
+                "aws_access_key_id": st.secrets["connections.s3"]["aws_access_key_id"],
+                "aws_secret_access_key": st.secrets["connections.s3"]["aws_secret_access_key"],
+                "region_name": st.secrets["connections.s3"]["region"]
+            }
+        }
+    )
+    
     df = conn.read("ashvinstreamlit/ola_name.csv", input_format="csv", ttl=600)
     
     # Data preprocessing
