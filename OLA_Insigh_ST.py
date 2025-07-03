@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import mysql.connector
 import matplotlib.pyplot as plt
 from st_files_connection import FilesConnection
 
@@ -29,14 +28,11 @@ if not st.session_state.view_analysis:
 if st.button("Back to Dashboard"):
     st.session_state.view_analysis = False
     st.rerun()
-    
-conn = st.connection("s3", type="s3", bucket="ashvinstreamlit")
-df = conn.read("ola_name.csv", input_format="csv", ttl=600)
 
-# Print results.
-for row in df.itertuples():
-    st.write(f"{row.Owner} has a :{row.Pet}:")
-# MySQL connection
+# Connect to S3 CSV
+conn = st.connection("s3", type=FilesConnection)
+df = conn.read("s3://ashvinstreamlit/ola_name.csv", input_format="csv", ttl=600)
+df['Date'] = pd.to_datetime(df['Date'])  # Ensure Date column is parsed
 
 # Dropdown
 analysis_options = [
@@ -57,17 +53,8 @@ selected_analysis = st.selectbox("Choose an Analysis:", analysis_options)
 
 # 1. Successful Bookings Over Time
 if selected_analysis == analysis_options[1]:
-    query = """ 
-    SELECT * 
-    FROM ola_rides 
-    WHERE Booking_Status = 'SUCCESS'
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(results, columns=columns)
-    df['Date'] = pd.to_datetime(df['Date'])
-    daily_counts = df.groupby('Date').size()
+    result_df = df[df['Booking_Status'] == 'SUCCESS']
+    daily_counts = result_df.groupby('Date').size()
     fig, ax = plt.subplots(figsize=(12, 6))
     daily_counts.plot(ax=ax, marker='o', color='green')
     ax.set_title("Successful Bookings Over Time", fontsize=18)
@@ -77,89 +64,44 @@ if selected_analysis == analysis_options[1]:
 
 # 2. Average Ride Distance per Vehicle Type
 elif selected_analysis == analysis_options[2]:
-    query = """
-    SELECT Vehicle_Type, AVG(Ride_Distance) AS Avg_Ride_Distance
-    FROM ola_rides
-    WHERE Booking_Status = 'SUCCESS'
-    GROUP BY Vehicle_Type;
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(results, columns=columns)
-    st.dataframe(df)
+    result_df = df[df['Booking_Status'] == 'SUCCESS']
+    avg_distance = result_df.groupby('Vehicle_Type')['Ride_Distance'].mean().reset_index()
+    avg_distance.columns = ['Vehicle_Type', 'Avg_Ride_Distance']
+    st.dataframe(avg_distance)
 
 # 3. Total Cancelled Rides by Customers
 elif selected_analysis == analysis_options[3]:
-    query = """
-    SELECT COUNT(*) AS Total_Customer_Cancelled_Rides
-    FROM ola_rides
-    WHERE Canceled_Rides_by_Customer != 'Not Applicable';
-    """
-    cursor.execute(query)
-    results = cursor.fetchone()
-    st.markdown(f"<h3 style='font-size:22px;'>Total Cancelled Rides by Customers: <b>{results[0]}</b></h3>", unsafe_allow_html=True)
+    total_canceled = df[df['Canceled_Rides_by_Customer'] != 'Not Applicable'].shape[0]
+    st.markdown(f"<h3 style='font-size:22px;'>Total Cancelled Rides by Customers: <b>{total_canceled}</b></h3>", unsafe_allow_html=True)
 
 # 4. Top 5 Customers by Ride Count
 elif selected_analysis == analysis_options[4]:
-    query = """
-    SELECT 
-        TRIM(Customer_ID) AS CUSTOMERS,
-        COUNT(*) AS TOTAL_RIDES
-    FROM ola_rides
-    WHERE Booking_Status = 'SUCCESS'
-    GROUP BY TRIM(Customer_ID)
-    ORDER BY TOTAL_RIDES DESC, TRIM(Customer_ID) ASC
-    LIMIT 5;
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(results, columns=columns)
-    st.dataframe(df)
+    result_df = df[df['Booking_Status'] == 'SUCCESS']
+    top_customers = result_df['Customer_ID'].str.strip().value_counts().head(5).reset_index()
+    top_customers.columns = ['CUSTOMERS', 'TOTAL_RIDES']
+    st.dataframe(top_customers)
 
 # 5. Driver Cancellations (Personal/Car Issue)
 elif selected_analysis == analysis_options[5]:
-    query = """
-    SELECT COUNT(*) AS Canceled_Rides_by_Driver
-    FROM ola_rides
-    WHERE Canceled_Rides_by_Driver = 'Personal & Car related issue';
-    """
-    cursor.execute(query)
-    results = cursor.fetchone()
-    st.markdown(f"<h3 style='font-size:22px;'>Driver Cancellations (Personal & Car Issues): <b>{results[0]}</b></h3>", unsafe_allow_html=True)
+    count = df[df['Canceled_Rides_by_Driver'] == 'Personal & Car related issue'].shape[0]
+    st.markdown(f"<h3 style='font-size:22px;'>Driver Cancellations (Personal & Car Issues): <b>{count}</b></h3>", unsafe_allow_html=True)
 
 # 6. Max & Min Ratings for Prime Sedan
 elif selected_analysis == analysis_options[6]:
-    query = """
-    SELECT 
-        MAX(Driver_Ratings),
-        MIN(Driver_Ratings)
-    FROM ola_rides
-    WHERE Vehicle_Type = 'Prime Sedan' AND Driver_Ratings >= 1
-    """
-    cursor.execute(query)
-    results = cursor.fetchone()
+    result_df = df[(df['Vehicle_Type'] == 'Prime Sedan') & (df['Driver_Ratings'] >= 1)]
+    max_rating = result_df['Driver_Ratings'].max()
+    min_rating = result_df['Driver_Ratings'].min()
     st.markdown(f"""
     <h4 style='font-size:22px;'>Prime Sedan Ratings</h4>
-    <p style='font-size:18px;'>Maximum: <b>{results[0]}</b><br>Minimum: <b>{results[1]}</b></p>
+    <p style='font-size:18px;'>Maximum: <b>{max_rating}</b><br>Minimum: <b>{min_rating}</b></p>
     """, unsafe_allow_html=True)
 
 # 7. UPI Payment Ride Trend
 elif selected_analysis == analysis_options[7]:
-    query = """
-    SELECT *
-    FROM ola_rides
-    WHERE Payment_Method = 'UPI'
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(results, columns=columns)
-    df['Date'] = pd.to_datetime(df['Date'])
-    trend = df.groupby('Date').size()
+    upi_df = df[df['Payment_Method'] == 'UPI']
+    upi_trend = upi_df.groupby('Date').size()
     fig, ax = plt.subplots(figsize=(12, 6))
-    trend.plot(ax=ax, marker='o', color='blue')
+    upi_trend.plot(ax=ax, marker='o', color='blue')
     ax.set_title("UPI Payment Rides Over Time", fontsize=18)
     ax.set_xlabel("Date", fontsize=14)
     ax.set_ylabel("Number of Rides", fontsize=14)
@@ -167,43 +109,23 @@ elif selected_analysis == analysis_options[7]:
 
 # 8. Avg Customer Rating by Vehicle Type
 elif selected_analysis == analysis_options[8]:
-    query = """
-    SELECT Vehicle_Type, AVG(Customer_Rating)
-    FROM ola_rides
-    GROUP BY Vehicle_Type
-    ORDER BY AVG(Customer_Rating)
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(results, columns=columns)
-    st.dataframe(df)
+    avg_rating = df.groupby('Vehicle_Type')['Customer_Rating'].mean().reset_index()
+    avg_rating.columns = ['Vehicle_Type', 'Average_Customer_Rating']
+    st.dataframe(avg_rating)
 
 # 9. Total Booking Value of Successful Rides
 elif selected_analysis == analysis_options[9]:
-    query ="""
-    SELECT SUM(Booking_Value)
-    FROM ola_rides
-    WHERE Booking_Status = 'SUCCESS' AND Incomplete_Rides = 'No'
-    """
-    cursor.execute(query)
-    results = cursor.fetchone()
+    result_df = df[(df['Booking_Status'] == 'SUCCESS') & (df['Incomplete_Rides'] == 'No')]
+    total_value = result_df['Booking_Value'].sum()
     st.markdown(f"""
     <h3 style='font-size:24px;'>Total Revenue from Successful Rides:</h3>
-    <p style='font-size:30px; font-weight:bold;'>₹{results[0]:,.2f}</p>
+    <p style='font-size:30px; font-weight:bold;'>₹{total_value:,.2f}</p>
     """, unsafe_allow_html=True)
 
 # 10. Incomplete Rides by Reason & Vehicle Type
 elif selected_analysis == analysis_options[10]:
-    query = """
-    SELECT * FROM ola_rides
-    WHERE Incomplete_Rides = 'Yes' AND Incomplete_Rides_Reason != 'Not Applicable'
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(results, columns=columns)
-    grouped = df.groupby(['Vehicle_Type', 'Incomplete_Rides_Reason']).size().unstack(fill_value=0)
+    incomplete_df = df[(df['Incomplete_Rides'] == 'Yes') & (df['Incomplete_Rides_Reason'] != 'Not Applicable')]
+    grouped = incomplete_df.groupby(['Vehicle_Type', 'Incomplete_Rides_Reason']).size().unstack(fill_value=0)
     fig, ax = plt.subplots(figsize=(12, 6))
     grouped.plot(kind='bar', stacked=True, ax=ax, colormap='tab20')
     ax.set_title("Incomplete Rides by Reason and Vehicle Type", fontsize=18)
