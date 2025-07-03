@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import mysql.connector
 import matplotlib.pyplot as plt
+from st_files_connection import FilesConnection
 
 # Page Config
 st.set_page_config(page_title="OLA Ride Insights", layout="wide")
@@ -28,18 +29,15 @@ if not st.session_state.view_analysis:
 if st.button("Back to Dashboard"):
     st.session_state.view_analysis = False
     st.rerun()
+    
+conn = st.connection("s3", type="s3", bucket="ashvinstreamlit")
+df = conn.read("ola_name.csv", input_format="csv", ttl=600)
 
+# Print results.
+for row in df.itertuples():
+    st.write(f"{row.Owner} has a :{row.Pet}:")
 # MySQL connection
-def get_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="12345678",
-        database="ola_db"
-    )
 
-connection = get_connection()
-cursor = connection.cursor(buffered=True)
 # Dropdown
 analysis_options = [
     "Select Analysis",
