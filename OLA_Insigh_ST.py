@@ -30,7 +30,7 @@ if st.button("Back to Dashboard"):
     st.rerun()
 
 # Connect to S3 CSV
-conn = st.connection("s3", type=FilesConnection)
+conn = st.connection("s3", type="s3", bucket="ashvinstreamlit")
 df = conn.read("ola_name.csv", input_format="csv", ttl=600)
 df['Date'] = pd.to_datetime(df['Date'])  # Ensure Date column is parsed
 
