@@ -31,7 +31,7 @@ if st.button("Back to Dashboard"):
 
 # Connect to S3 CSV
 conn = st.connection("s3", type=FilesConnection)
-df = conn.read("s3://ashvinstreamlit/ola_name.csv", input_format="csv", ttl=600)
+df = conn.read("ashvinstreamlit/ola_name.csv", input_format="csv", ttl=600)
 df['Date'] = pd.to_datetime(df['Date'])  # Ensure Date column is parsed
 
 # Dropdown
