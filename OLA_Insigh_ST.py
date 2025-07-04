@@ -5,37 +5,20 @@ import matplotlib.pyplot as plt
 # --- Page Config ---
 st.set_page_config(page_title="OLA Ride Insights", layout="wide")
 
-# --- Session State ---
-if "view_analysis" not in st.session_state:
-    st.session_state.view_analysis = False
-
 # --- Title ---
-st.markdown("<h1 style='text-align: center; font-size: 35px;'>OLA Ride Insights</h1>", unsafe_allow_html=True)
-
-# --- Landing Page ---
-if not st.session_state.view_analysis:
-    st.markdown("""
-        <h2 style='font-size: 28px; text-align:center;'>Welcome to the OLA Ride Insights Dashboard</h2>
-        <p style='font-size: 20px; text-align:center;'>Click below to explore the analysis.</p>
-    """, unsafe_allow_html=True)
-    if st.button("Click to View Analysis", use_container_width=True):
-        st.session_state.view_analysis = True
-    st.stop()
-
-# --- Back Button ---
-if st.button("Back to Dashboard"):
-    st.session_state.view_analysis = False
-    st.rerun()
+st.markdown("""
+    <h1 style='text-align: center; font-size: 35px;'>OLA Ride Insights</h1>
+""", unsafe_allow_html=True)
 
 # --- Load Data from GitHub ---
 @st.cache_data(ttl=600)
 def load_data():
+    url = "https://raw.githubusercontent.com/AshvinAK17/OLA-Ride-Insights/main/ola_name.csv"
     try:
-        url = "https://raw.githubusercontent.com/AshvinAK17/OLA-Ride-Insights/main/ola_name.csv"
-        df = pd.read_csv(url)
+        df = pd.read_csv(url, encoding='utf-8', on_bad_lines='skip')
         return df
     except Exception as e:
-        st.error(f"Failed to load data: {str(e)}")
+        st.error(f"Failed to load data: {e}")
         return pd.DataFrame()
 
 df = load_data()
@@ -43,11 +26,12 @@ df = load_data()
 if df.empty:
     st.stop()
 
-# --- Data Preprocessing ---
+# --- Preprocessing ---
 df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 df['Customer_ID'] = df['Customer_ID'].astype(str).str.strip()
 
-# --- Analysis Dropdown ---
+# --- Analysis Selector ---
+st.sidebar.header("Select an Analysis")
 analysis_options = [
     "Select Analysis",
     "1. Successful Bookings Over Time",
@@ -61,10 +45,9 @@ analysis_options = [
     "9. Total Booking Value of Successful Rides",
     "10. Incomplete Rides by Reason & Vehicle"
 ]
+selected_analysis = st.sidebar.selectbox("Choose:", analysis_options)
 
-selected_analysis = st.selectbox("Choose an Analysis:", analysis_options)
-
-# --- Analysis Logic ---
+# --- Visualizations ---
 if selected_analysis == analysis_options[1]:
     st.subheader("Successful Bookings Over Time")
     result_df = df[df['Booking_Status'] == 'SUCCESS']
