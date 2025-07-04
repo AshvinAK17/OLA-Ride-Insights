@@ -85,11 +85,10 @@ elif selected_analysis == analysis_options[3]:
     total_canceled = df[df['Canceled_Rides_by_Customer'] != 'Not Applicable'].shape[0]
     st.markdown(f"<h3 style='font-size:22px;'>Total Cancelled Rides by Customers: <b>{total_canceled}</b></h3>", unsafe_allow_html=True)
 
-# 4. Top 5 Customers by Ride Count
 elif selected_analysis == analysis_options[4]:
     result_df = df[df['Booking_Status'] == 'SUCCESS']
-    top_customers = result_df['Customer_ID'].value_counts().head(5).reset_index()
-    top_customers.columns = ['Customer_ID', 'Ride_Count']
+    top_customers = result_df.groupby('Customer_ID').size().reset_index(name='Ride_Count')
+    top_customers = top_customers.sort_values(by=['Ride_Count', 'Customer_ID'], ascending=[False, True]).head(5).reset_index(drop=True)
     st.dataframe(top_customers)
 
 elif selected_analysis == analysis_options[5]:
