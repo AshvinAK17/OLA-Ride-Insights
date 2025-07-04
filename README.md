@@ -68,6 +68,7 @@ An end-to-end data analysis and visualization project using OLA ride datasets. T
 - Dynamic dropdown for 10 SQL-based visual analyses  
 - interactive visualizations via matplotlib and pandas
 
+Streamlit Server: https://ola-ride-insights-bc3apsuqxhwu8htgxsjyeq.streamlit.app/
 ---
 
 ## Setup Instructions
